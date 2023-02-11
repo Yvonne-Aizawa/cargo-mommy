@@ -28,7 +28,7 @@ struct Responses {
 enum ResponseType {
     Positive,
     Negative,
-    Natural
+    Natural,
 }
 
 fn main() {
@@ -52,13 +52,11 @@ fn real_main() -> Result<i32, Box<dyn std::error::Error>> {
     let output = cmd.output()?;
     eprintln!("\x1b[1m");
     if output.status.success() {
-        if parse_cargo_output(&output){
+        if parse_cargo_output(&output) {
             eprintln!("{}", select_response(ResponseType::Natural))
-        }
-        else{
+        } else {
             eprintln!("{}", select_response(ResponseType::Positive))
         }
-
     } else {
         eprintln!("{}", select_response(ResponseType::Negative));
     }
@@ -103,11 +101,10 @@ fn select_response(response_type: ResponseType) -> String {
     // Done~!
     response
 }
-fn parse_cargo_output(output: &Output) -> bool{
+fn parse_cargo_output(output: &Output) -> bool {
     let string = String::from_utf8(output.stderr.clone()).expect("failed to convert stderr");
 
     string.contains("generated") && string.contains("warning")
-    
 }
 fn parse_options(env_var: &str, default: &str) -> Vec<String> {
     std::env::var(env_var)
