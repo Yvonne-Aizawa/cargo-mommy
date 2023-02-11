@@ -1,5 +1,7 @@
 #![allow(clippy::let_and_return)]
 
+use std::process::Output;
+
 use rand::{rngs::StdRng, seq::SliceRandom, SeedableRng};
 use serde::Deserialize;
 
@@ -20,11 +22,13 @@ const MOMMYS_ROLES_DEFAULT: &str = "mommy";
 struct Responses {
     positive: Vec<String>,
     negative: Vec<String>,
+    natural: Vec<String>,
 }
 
 enum ResponseType {
     Positive,
     Negative,
+    Natural
 }
 
 fn main() {
@@ -45,15 +49,21 @@ fn real_main() -> Result<i32, Box<dyn std::error::Error>> {
 
     let mut cmd = std::process::Command::new(cargo);
     cmd.args(arg_iter);
-    let status = cmd.status()?;
+    let output = cmd.output()?;
     eprintln!("\x1b[1m");
-    if status.success() {
-        eprintln!("{}", select_response(ResponseType::Positive))
+    if output.status.success() {
+        if parse_cargo_output(&output){
+            eprintln!("{}", select_response(ResponseType::Natural))
+        }
+        else{
+            eprintln!("{}", select_response(ResponseType::Positive))
+        }
+
     } else {
         eprintln!("{}", select_response(ResponseType::Negative));
     }
     eprintln!("\x1b[0m");
-    Ok(status.code().unwrap_or(-1))
+    Ok(output.status.code().unwrap_or(-1))
 }
 
 fn select_response(response_type: ResponseType) -> String {
@@ -70,6 +80,7 @@ fn select_response(response_type: ResponseType) -> String {
     let response = match response_type {
         ResponseType::Positive => &responses.positive,
         ResponseType::Negative => &responses.negative,
+        ResponseType::Natural => &responses.natural,
     }
     .choose(&mut rng)
     .expect("non-zero amount of responses");
@@ -92,7 +103,12 @@ fn select_response(response_type: ResponseType) -> String {
     // Done~!
     response
 }
+fn parse_cargo_output(output: &Output) -> bool{
+    let string = String::from_utf8(output.stderr.clone()).expect("failed to convert stderr");
 
+    string.contains("generated") && string.contains("warning")
+    
+}
 fn parse_options(env_var: &str, default: &str) -> Vec<String> {
     std::env::var(env_var)
         .unwrap_or_else(|_| default.to_owned())
@@ -112,7 +128,6 @@ fn apply_template(input: &str, template_key: &str, options: &[String], rng: &mut
     output.push_str(&input[last_position..]);
     output
 }
-
 #[cfg(test)]
 #[test]
 fn test() {
